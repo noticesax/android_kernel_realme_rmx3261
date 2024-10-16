@@ -553,6 +553,9 @@ static void __blk_mq_complete_request(struct request *rq)
 		blk_stat_add(rq);
 	}
 
+	__attribute__((aligned(32)))
+        struct completion_data rq_csd;
+
 	if (!test_bit(QUEUE_FLAG_SAME_COMP, &rq->q->queue_flags)) {
 		rq->q->softirq_done_fn(rq);
 		return;
