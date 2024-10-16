@@ -542,40 +542,36 @@ static void __blk_mq_complete_request_remote(void *data)
 
 static void __blk_mq_complete_request(struct request *rq)
 {
-        struct blk_mq_ctx *ctx = rq->mq_ctx;
-        bool shared = false;
-        int cpu;
+	struct blk_mq_ctx *ctx = rq->mq_ctx;
+	bool shared = false;
+	int cpu;
 
-        if (rq->internal_tag != -1)
-                blk_mq_sched_completed_request(rq);
-        if (rq->rq_flags & RQF_STATS) {
-                blk_mq_poll_stats_start(rq->q);
-                blk_stat_add(rq);
-        }
+	if (rq->internal_tag != -1)
+		blk_mq_sched_completed_request(rq);
+	if (rq->rq_flags & RQF_STATS) {
+		blk_mq_poll_stats_start(rq->q);
+		blk_stat_add(rq);
+	}
 
-        __attribute__((aligned(32)))
-        struct completion_data rq_csd;
+	if (!test_bit(QUEUE_FLAG_SAME_COMP, &rq->q->queue_flags)) {
+		rq->q->softirq_done_fn(rq);
+		return;
+	}
 
-        if (!test_bit(QUEUE_FLAG_SAME_COMP, &rq->q->queue_flags)) {
-                rq->q->softirq_done_fn(rq);
-                return;
-        }
+	cpu = get_cpu();
+	if (!test_bit(QUEUE_FLAG_SAME_FORCE, &rq->q->queue_flags) ||
+			idle_cpu(ctx->cpu))
+		shared = cpus_share_cache(cpu, ctx->cpu);
 
-        cpu = get_cpu();
-        if (!test_bit(QUEUE_FLAG_SAME_FORCE, &rq->q->queue_flags))
-                shared = cpus_share_cache(cpu, ctx->cpu);
-
-        if (cpu != ctx->cpu && !shared && cpu_online(ctx->cpu)) {
-                rq_csd.func = __blk_mq_complete_request_remote;
-                rq_csd.info = rq;
-                rq_csd.flags = 0;
-                smp_call_function_single_async(ctx->cpu, &rq_csd);
-        } else {
-                rq->q->softirq_done_fn(rq);
-        }
-        put_cpu();
+	if (cpu != ctx->cpu && !shared && cpu_online(ctx->cpu)) {
+		rq->csd.func = __blk_mq_complete_request_remote;
+		rq->csd.info = rq;
+		rq->csd.flags = 0;
+	} else {
+		rq->q->softirq_done_fn(rq);
+	}
+	put_cpu();
 }
-
 
 /**
  * blk_mq_complete_request - end I/O on a request
@@ -2493,10 +2489,12 @@ EXPORT_SYMBOL(blk_mq_init_allocated_queue);
 
 void blk_mq_free_queue(struct request_queue *q)
 {
-	struct blk_mq_tag_set	*set = q->tag_set;
+	struct blk_mq_tag_set *set = q->tag_set;
 
-	blk_mq_del_queue_tag_set(q);
+	/* Checks hctx->flags & BLK_MQ_F_TAG_QUEUE_SHARED. */
 	blk_mq_exit_hw_queues(q, set, set->nr_hw_queues);
+	/* May clear BLK_MQ_F_TAG_QUEUE_SHARED in hctx->flags. */
+	blk_mq_del_queue_tag_set(q);
 }
 
 /* Basically redo blk_mq_init_queue with queue frozen */
