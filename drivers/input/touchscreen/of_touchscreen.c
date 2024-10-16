@@ -64,68 +64,69 @@ static void touchscreen_set_params(struct input_dev *dev,
  * values if no value is specified via DT.
  */
 void touchscreen_parse_properties(struct input_dev *input, bool multitouch,
-				  struct touchscreen_properties *prop)
+                                  struct touchscreen_properties *prop)
 {
-	struct device *dev = input->dev.parent;
-	unsigned int axis;
-	unsigned int maximum, fuzz;
-	bool data_present;
+        struct device *dev = input->dev.parent;
+        unsigned int axis;
+        unsigned int maximum, fuzz;
+        bool data_present;
 
-	input_alloc_absinfo(input);
-	if (!input->absinfo)
-		return;
+        input_alloc_absinfo(input);
+        if (!input->absinfo)
+                return;
 
-	axis = multitouch ? ABS_MT_POSITION_X : ABS_X;
-	data_present = touchscreen_get_prop_u32(dev, "touchscreen-size-x",
-						input_abs_get_max(input,
-								  axis) + 1,
-						&maximum) |
-		       touchscreen_get_prop_u32(dev, "touchscreen-fuzz-x",
-						input_abs_get_fuzz(input, axis),
-						&fuzz);
-	if (data_present)
-		touchscreen_set_params(input, axis, maximum - 1, fuzz);
+        axis = multitouch ? ABS_MT_POSITION_X : ABS_X;
+        data_present = touchscreen_get_prop_u32(dev, "touchscreen-size-x",
+                                                input_abs_get_max(input,
+                                                                  axis) + 1,
+                                                &maximum) ||
+                       touchscreen_get_prop_u32(dev, "touchscreen-fuzz-x",
+                                                input_abs_get_fuzz(input, axis),
+                                                &fuzz);
+        if (data_present)
+                touchscreen_set_params(input, axis, maximum - 1, fuzz);
 
-	axis = multitouch ? ABS_MT_POSITION_Y : ABS_Y;
-	data_present = touchscreen_get_prop_u32(dev, "touchscreen-size-y",
-						input_abs_get_max(input,
-								  axis) + 1,
-						&maximum) |
-		       touchscreen_get_prop_u32(dev, "touchscreen-fuzz-y",
-						input_abs_get_fuzz(input, axis),
-						&fuzz);
-	if (data_present)
-		touchscreen_set_params(input, axis, maximum - 1, fuzz);
+        axis = multitouch ? ABS_MT_POSITION_Y : ABS_Y;
+        data_present = touchscreen_get_prop_u32(dev, "touchscreen-size-y",
+                                                input_abs_get_max(input,
+                                                                  axis) + 1,
+                                                &maximum) ||
+                       touchscreen_get_prop_u32(dev, "touchscreen-fuzz-y",
+                                                input_abs_get_fuzz(input, axis),
+                                                &fuzz);
+        if (data_present)
+                touchscreen_set_params(input, axis, maximum - 1, fuzz);
 
-	axis = multitouch ? ABS_MT_PRESSURE : ABS_PRESSURE;
-	data_present = touchscreen_get_prop_u32(dev,
-						"touchscreen-max-pressure",
-						input_abs_get_max(input, axis),
-						&maximum) |
-		       touchscreen_get_prop_u32(dev,
-						"touchscreen-fuzz-pressure",
-						input_abs_get_fuzz(input, axis),
-						&fuzz);
-	if (data_present)
-		touchscreen_set_params(input, axis, maximum, fuzz);
+        axis = multitouch ? ABS_MT_PRESSURE : ABS_PRESSURE;
+        data_present = touchscreen_get_prop_u32(dev,
+                                                "touchscreen-max-pressure",
+                                                input_abs_get_max(input, axis),
+                                                &maximum) ||
+                       touchscreen_get_prop_u32(dev,
+                                                "touchscreen-fuzz-pressure",
+                                                input_abs_get_fuzz(input, axis),
+                                                &fuzz);
+        if (data_present)
+                touchscreen_set_params(input, axis, maximum, fuzz);
 
-	if (!prop)
-		return;
+        if (!prop)
+                return;
 
-	axis = multitouch ? ABS_MT_POSITION_X : ABS_X;
+        axis = multitouch ? ABS_MT_POSITION_X : ABS_X;
 
-	prop->max_x = input_abs_get_max(input, axis);
-	prop->max_y = input_abs_get_max(input, axis + 1);
-	prop->invert_x =
-		device_property_read_bool(dev, "touchscreen-inverted-x");
-	prop->invert_y =
-		device_property_read_bool(dev, "touchscreen-inverted-y");
-	prop->swap_x_y =
-		device_property_read_bool(dev, "touchscreen-swapped-x-y");
+        prop->max_x = input_abs_get_max(input, axis);
+        prop->max_y = input_abs_get_max(input, axis + 1);
+        prop->invert_x =
+                device_property_read_bool(dev, "touchscreen-inverted-x");
+        prop->invert_y =
+                device_property_read_bool(dev, "touchscreen-inverted-y");
+        prop->swap_x_y =
+                device_property_read_bool(dev, "touchscreen-swapped-x-y");
 
-	if (prop->swap_x_y)
-		swap(input->absinfo[axis], input->absinfo[axis + 1]);
+        if (prop->swap_x_y)
+                swap(input->absinfo[axis], input->absinfo[axis + 1]);
 }
+
 EXPORT_SYMBOL(touchscreen_parse_properties);
 
 static void
