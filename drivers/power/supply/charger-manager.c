@@ -170,7 +170,7 @@ static void set_batt_charge_status(int user, int status, int enable)
 	enable_charger_arr[user] = !enable;
 }
 
-static int get_en_charge_state()
+static int get_en_charge_state(void)
 {
 	int i;
 	int val = 0;
@@ -185,7 +185,7 @@ static int get_en_charge_state()
 /**
  * stop charge alaways display icon
  */
-static void cm_enable_charge()
+static void cm_enable_charge(void)
 {
 	int val = 0;
 
